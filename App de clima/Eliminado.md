@@ -1,2 +1,0 @@
-fichero para eliminar
-
