@@ -1,4 +1,6 @@
 mas mejoras nada importantes:(
 
+con rebase
+
 #cliente mamon
 -Rama derivadass, no integral.
