@@ -75,7 +75,7 @@ button:hover {
   display: flex;
   justify-content: space-between;
   text-align: center;
-  background: #555fa3eb;
+  background: #555fa3b8;
   padding: 10px;
   border-radius: 15px;
   min-width: 10px;
@@ -96,7 +96,7 @@ button:hover {
 }
 
 .day-card {
-  background: #7077a7;
+  background: #434d93f0;
   border-radius: 15px;
   text-align: center;
   min-width: 70px;
@@ -116,7 +116,7 @@ button:hover {
 }
 .sen1 {
     text-align: center;
-    background: #9ca3d4;
+    background: #3e4999fa;
     padding: 15px;
     border-radius: 15px;
     width: 80px;
