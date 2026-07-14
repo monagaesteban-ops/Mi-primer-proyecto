@@ -87,3 +87,13 @@ const fechaFormateada =
 
 document.getElementById('fecha')
  .textContent = fechaFormateada;
+
+
+ const input = document.querySelector('input');
+
+input.addEventListener('keydown', (event) => {
+    if (event.key === 'Enter') {
+        event.preventDefault();
+        document.querySelector('button').click();
+    }
+});
