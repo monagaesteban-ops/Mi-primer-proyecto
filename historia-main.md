@@ -1,5 +1,5 @@
 # Historia de la rama master
 
-Hace unas semanas que este curso empezo y dentro de poco acabara...
+Este curso se ha realizado en los meses de Junio y Julio.
 
 Inicios de la rama
