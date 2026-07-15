@@ -1,5 +1,5 @@
 body {
-    background: #050522;
+    background: #1c1c57;
     color: #e0e0e0;
     font-family: 'Iceland', sans-serif;
     margin: 0;
@@ -34,7 +34,7 @@ input {
 button {
     padding: 10px 20px;
     background-color: #ff9f1c;
-    color: #0b0f24;
+    color: #121831;
     border: none;
     cursor: pointer;
     border-radius: 10px;
@@ -53,7 +53,7 @@ button:hover {
 }
 
 .current-weather, .forecast {
-    background-color: #1e1f3d;
+    background-color: #06063278;
     padding: 0px;
     border-radius: 10px;
     margin: 0px;
@@ -108,7 +108,7 @@ button:hover {
   width: 60px;
 }
 .sen {
-    background-color: #1e1f3d;
+    background-color: #0f1147ca;
     padding: 5px;
     border-radius: 10px;
     margin: 0px;

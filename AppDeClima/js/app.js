@@ -96,4 +96,4 @@ input.addEventListener('keydown', (event) => {
         event.preventDefault();
         document.querySelector('button').click();
     }
-});
+});   
