@@ -3,3 +3,5 @@
 -Mi primer proyecto, mi primer app:)
 
 -modificacion.
+
+- Actualización de la app
