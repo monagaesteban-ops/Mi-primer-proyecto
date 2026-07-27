@@ -150,3 +150,15 @@ button:hover {
     width: 90px;
     /* display: none; */
 }
+
+@media (max-width: 768px) {
+.hourly-container {
+ display: flex;
+ flex-direction: row;
+ gap: 10px;
+ overflow-x: auto;
+ padding: 10px;
+ white-space: nowrap;
+ max-height:none;
+ }
+}
