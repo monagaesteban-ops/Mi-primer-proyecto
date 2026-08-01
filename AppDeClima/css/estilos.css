@@ -157,9 +157,9 @@ button:hover {
  flex-direction: row;
  justify-content: center;
  align-items: center;
- gap: 15px;
+ gap: 30px;
  overflow-x: auto;
- padding: 20px;
+ padding: 40px;
  white-space: nowrap;
  max-height: none;
  }
