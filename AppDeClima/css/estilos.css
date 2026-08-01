@@ -153,19 +153,18 @@ button:hover {
 
 @media (max-width: 950px) {
 .hourly-container {
- min-width: 70px;
  flex-direction: row;
  justify-content: center;
  align-items: center;
- gap: 40px;
+ gap: 15px;
  overflow-x: auto;
- padding: 40px;
+ padding: 10px;
  white-space: nowrap;
  max-height: none;
  }
 
 .hour-card {
-  min-width: 80px;
+  min-width: 70px;
   }
 }
 
