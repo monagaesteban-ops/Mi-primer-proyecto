@@ -159,7 +159,7 @@ button:hover {
  align-items: center;
  gap: 15px;
  overflow-x: auto;
- padding: 10px;
+ padding: 20px;
  white-space: nowrap;
  max-height: none;
  }
