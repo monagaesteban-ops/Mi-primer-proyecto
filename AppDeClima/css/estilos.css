@@ -153,7 +153,7 @@ button:hover {
 
 @media (max-width: 950px) {
 .hourly-container {
- display: flex;
+ min-width: 70px;
  flex-direction: column;
  justify-content: center;
  align-items: center;
