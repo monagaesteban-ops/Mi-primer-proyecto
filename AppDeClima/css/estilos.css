@@ -163,5 +163,17 @@ button:hover {
  white-space: nowrap;
  max-height: none;
  }
+
+.hour-card {
+  display: flex;
+  justify-content: space-between;
+  text-align: center;
+  background: #555fa3b8;
+  padding: 10px;
+  border-radius: 15px;
+  min-width: 80px;
+  color: aliceblue;
+  box-shadow: 0 30px 30px rgba(0,0,0,0.2);
+}
 }
 
