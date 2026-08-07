@@ -1,99 +1,191 @@
-document.querySelector('button').addEventListener('click', () => {
-    const city = document.querySelector('input').value;
-    if (!city) {
-    alert("Escribe una ciudad, genio.");
-    return;
+const boton = document.querySelector('button');
+const botonUbicacion = document.getElementById('btn-ubicacion');
+const input = document.querySelector('input');
+const mensajeEstado = document.getElementById('mensaje-estado');
+const spinner = document.getElementById('spinner');
+const estadoVacio = document.getElementById('estado-vacio');
+const climaActual = document.getElementById('clima-actual');
+const pronosticoHoras = document.getElementById('pronostico-horas');
+
+const CLAVE_ULTIMA_CIUDAD = 'ultimaCiudadBuscada';
+
+function mostrarMensaje(texto, esError = false) {
+  mensajeEstado.textContent = texto;
+  mensajeEstado.classList.toggle('error', esError);
 }
-    const apiKey = 'ca9a1ca2c653455ee55261e613d15850';
-    const Url = `https://api.openweathermap.org/data/2.5/weather?q=${city}&appid=${apiKey}&units=metric&lang=es`;
-    const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${city}&appid=${apiKey}&units=metric&lang=es`;
-    // const data = await res.json();
-    
-const sensacion = document.getElementById('sensacion')
-const humedad = document.getElementById('humedad')
-const viento = document.getElementById('viento')
-const prec = document.getElementById('prec')
 
+function ponerCargando(cargando) {
+  boton.disabled = cargando;
+  spinner.classList.toggle('activo', cargando);
+}
 
+/**
+ * Orquesta los tres proveedores:
+ * 1. Intenta Open-Meteo (principal).
+ * 2. Si falla, intenta OpenWeather (respaldo).
+ * 3. Si cualquiera de los dos tiene éxito, pide a WeatherAPI datos extra
+ *    (UV / calidad del aire) como mejor esfuerzo: si eso falla, no pasa nada.
+ */
+async function obtenerClima({ ciudadTexto, coords }) {
+  let resultado;
+  let coordsFinal = coords;
 
-fetch(Url)
-        .then(res => res.json())
-        .then(data => {
- 
-            if (data.cod != 200) {
-                alert("Ciudad no encontrada");
-                return;
-            }
+  try {
+    if (ciudadTexto) {
+      const geo = await geocodificarCiudad(ciudadTexto);
+      coordsFinal = { lat: geo.lat, lon: geo.lon };
+      resultado = await climaOpenMeteo(geo.lat, geo.lon, geo.nombre, geo.pais);
+    } else {
+      resultado = await climaOpenMeteo(coords.lat, coords.lon);
+    }
+  } catch (errorPrincipal) {
+    try {
+      resultado = ciudadTexto
+        ? await climaOpenWeatherPorCiudad(ciudadTexto)
+        : await climaOpenWeatherPorCoords(coords.lat, coords.lon);
+      coordsFinal = { lat: resultado.lat, lon: resultado.lon };
+    } catch (errorRespaldo) {
+      if (errorRespaldo.message === 'CIUDAD_NO_ENCONTRADA') throw errorRespaldo;
+      throw new Error('SIN_DATOS');
+    }
+  }
 
-            document.querySelector('.current-weather h3')
-                .textContent = `${data.name}, ${data.sys.country}`;
+  resultado.extra = await datosExtra(coordsFinal.lat, coordsFinal.lon);
+  return resultado;
+}
 
-            document.querySelector('.current-weather h1')
-                .textContent = `${Math.round(data.main.temp)}°`;
+function renderClima(datos) {
+  document.querySelector('.current-weather h3').textContent = datos.pais
+    ? `${datos.ciudad}, ${datos.pais}`
+    : datos.ciudad;
 
-            document.getElementById('descripcion')
-                .textContent = data.weather[0].description;
+  document.querySelector('.current-weather h1').textContent = `${Math.round(datos.temp)}°`;
+  document.getElementById('descripcion').textContent = datos.descripcion;
+  document.getElementById('sensacion').textContent = `Sensación: ${Math.round(datos.sensacion)}°`;
+  document.getElementById('humedad').textContent = `Humedad: ${Math.round(datos.humedad)}%`;
+  document.getElementById('viento').textContent = `Viento: ${datos.vientoKmh.toFixed(1)} km/h`;
+  document.getElementById('prec').textContent = `Precipitación: ${datos.precipitacion} mm`;
 
-            document.getElementById('sensacion')
-                .textContent = `Sensación térmica: ${Math.round(data.main.feels_like)}°`;
+  document.getElementById('icono-clima').src = `https://openweathermap.org/img/wn/${datos.icono}@2x.png`;
+  document.getElementById('icono-clima').alt = datos.descripcion;
 
-            document.getElementById('humedad')
-                .textContent = `Humedad: ${data.main.humidity}%`;
-                
-            document.getElementById('viento')
-                .textContent = `Viento: ${data.wind.speed.toFixed(1)} km/h`;
+  // Datos extra (WeatherAPI): solo se muestran si llegaron
+  const uvEl = document.getElementById('uv');
+  if (datos.extra && datos.extra.uv != null) {
+    uvEl.textContent = `Índice UV: ${Math.round(datos.extra.uv)}`;
+    uvEl.classList.remove('oculto');
+  } else {
+    uvEl.classList.add('oculto');
+  }
 
-            document.getElementById('prec')
-                .textContent =
-                    `Precipitación: ${data.rain ? data.rain['1h'] + ' mm' : '0 mm'}`;
+  const aireEl = document.getElementById('aire');
+  if (datos.extra && datos.extra.aireTexto) {
+    aireEl.textContent = `Calidad del aire: ${datos.extra.aireTexto}`;
+    aireEl.classList.remove('oculto');
+  } else {
+    aireEl.classList.add('oculto');
+  }
 
-            const icono = document.getElementById('icono-clima');        
-            const icon = data.weather[0].icon;
+  // Transparencia: si se usó el respaldo, lo indicamos discretamente
+  const fuenteEl = document.getElementById('fuente-datos');
+  if (datos.fuente === 'openweather') {
+    fuenteEl.textContent = 'Datos de respaldo (OpenWeather)';
+    fuenteEl.classList.remove('oculto');
+  } else {
+    fuenteEl.classList.add('oculto');
+  }
 
-            document.getElementById('icono-clima').src =
-                `https://openweathermap.org/img/wn/${icon}@2x.png`;
+  mostrarHoras(datos.horas);
+  mostrarDias(datos.dias);
 
-                
-        //  console.log(data.weather[0].icon);
+  mostrarMensaje('');
+  estadoVacio.classList.add('oculto');
+  climaActual.classList.remove('oculto');
+  pronosticoHoras.classList.remove('oculto');
 
-                
-    fetch(forecastUrl)
-        .then(response => response.json())
-        .then(forecastData => {
+  localStorage.setItem(CLAVE_ULTIMA_CIUDAD, datos.ciudad);
+  input.value = datos.ciudad;
+}
 
-            mostrarHoras(forecastData.list);
+async function cargarClima(opciones) {
+  ponerCargando(true);
+  mostrarMensaje(opciones.ciudadTexto ? 'Buscando...' : 'Buscando el clima de tu ubicación...');
 
-            mostrarDias(forecastData.list);
+  try {
+    const datos = await obtenerClima(opciones);
+    renderClima(datos);
+  } catch (error) {
+    mostrarMensaje(
+      error.message === 'CIUDAD_NO_ENCONTRADA'
+        ? 'Ciudad no encontrada.'
+        : 'No se pudo obtener el clima. Comprueba tu conexión e inténtalo de nuevo.',
+      true
+    );
+  } finally {
+    ponerCargando(false);
+  }
+}
 
-        });
+async function buscarClima() {
+  const city = input.value.trim();
+  if (!city) {
+    mostrarMensaje('Escribe una ciudad para buscar.', true);
+    return;
+  }
 
-        
-const container = document.querySelector(".daily-forecast-container");
-        });
+  await cargarClima({ ciudadTexto: city });
+}
 
-});
+function buscarPorUbicacion() {
+  if (!navigator.geolocation) {
+    mostrarMensaje('Tu navegador no admite geolocalización.', true);
+    return;
+  }
 
-const fecha = new Date();
+  ponerCargando(true);
+  mostrarMensaje('Obteniendo tu ubicación...');
 
-const opciones = {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric'
-};
+  navigator.geolocation.getCurrentPosition(
+    async (posicion) => {
+      const { latitude, longitude } = posicion.coords;
+      await cargarClima({ coords: { lat: latitude, lon: longitude } });
+    },
+    (error) => {
+      const mensajes = {
+        1: 'Permiso de ubicación denegado.',
+        2: 'No se pudo determinar tu ubicación.',
+        3: 'Se agotó el tiempo para obtener tu ubicación.',
+      };
+      mostrarMensaje(mensajes[error.code] || 'No se pudo obtener tu ubicación.', true);
+      ponerCargando(false);
+    }
+  );
+}
 
-const fechaFormateada =
-    fecha.toLocaleDateString('es-ES', opciones);
+botonUbicacion.addEventListener('click', buscarPorUbicacion);
 
-document.getElementById('fecha')
- .textContent = fechaFormateada;
-
-
- const input = document.querySelector('input');
+boton.addEventListener('click', buscarClima);
 
 input.addEventListener('keydown', (event) => {
-    if (event.key === 'Enter') {
-        event.preventDefault();
-        document.querySelector('button').click();
-    }
-});   
+  if (event.key === 'Enter') {
+    event.preventDefault();
+    buscarClima();
+  }
+});
+
+// Al recargar la página, si hay una ciudad guardada, la buscamos automáticamente
+const ultimaCiudad = localStorage.getItem(CLAVE_ULTIMA_CIUDAD);
+if (ultimaCiudad) {
+  input.value = ultimaCiudad;
+  buscarClima();
+}
+
+const fecha = new Date();
+const opciones = {
+  weekday: 'long',
+  day: 'numeric',
+  month: 'long',
+  year: 'numeric',
+};
+document.getElementById('fecha').textContent =
+  fecha.toLocaleDateString('es-ES', opciones);

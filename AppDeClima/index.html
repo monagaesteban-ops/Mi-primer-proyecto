@@ -4,18 +4,39 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pronóstico del Tiempo</title>
+    <link
+      href="https://fonts.googleapis.com/css2?family=Edu+NSW+ACT+Cursive:wght@400..700&family=Iceland&display=swap"
+      rel="stylesheet"
+    />
     <link href="css/estilos.css" rel="stylesheet" />
   </head>
   <body>
     <header>
       <h1>Pronóstico del Tiempo</h1>
       <h2>¿Cómo se ve el cielo hoy?</h2>
-      <input type="text" placeholder="Busca un lugar..." />
-      <button>Buscar</button>
+      <div class="search-bar">
+        <input type="text" placeholder="Busca un lugar..." aria-label="Ciudad" />
+        <button type="button">Buscar</button>
+        <button type="button" id="btn-ubicacion" title="Usar mi ubicación" aria-label="Usar mi ubicación">📍</button>
+      </div>
+      <p class="mensaje-estado" id="mensaje-estado"></p>
+      <div class="spinner" id="spinner"></div>
     </header>
     <main class="main">
-      <section class="current-weather">
-        <h3>Ciudad</h3>
+      <section class="estado-vacio" id="estado-vacio">
+        <svg class="estado-vacio-icono" viewBox="0 0 24 24" aria-hidden="true">
+          <path
+            d="M17.5 18a4.5 4.5 0 0 0 0-9 6 6 0 0 0-11.4-1.7A4.5 4.5 0 0 0 6.5 18h11Z"
+            fill="none" stroke="currentColor" stroke-width="1.4"
+            stroke-linecap="round" stroke-linejoin="round"
+          />
+        </svg>
+        <p>Busca una ciudad para ver su pronóstico.</p>
+        <p class="estado-vacio-sub">Por ejemplo: Madrid, Ciudad de México, Bogotá...</p>
+      </section>
+
+      <section class="current-weather oculto" id="clima-actual">
+        <h3></h3>
         <p id="fecha"></p>
         <h1></h1>
         <p id="descripcion"></p>
@@ -30,8 +51,11 @@
             <div class="sen1" id="humedad"></div>
             <div class="sen1" id="viento"></div>
             <div class="sen1" id="prec"></div>
+            <div class="sen1 oculto" id="uv"></div>
+            <div class="sen1 oculto" id="aire"></div>
           </div>
         </div>
+        <p class="fuente-datos oculto" id="fuente-datos"></p>
 
         <div class="daily-container">
           <h3>Pronóstico diario</h3>
@@ -39,14 +63,12 @@
         </div>
       </section>
 
-      <div class="sen">
+      <div class="sen oculto" id="pronostico-horas">
         <h3>Pronóstico por horas</h3>
         <div class="hourly-container"></div>
       </div>
     </main>
-    <style>
-      @import url("https://fonts.googleapis.com/css2?family=Edu+NSW+ACT+Cursive:wght@400..700&family=Iceland&display=swap");
-    </style>
+    <script src="js/proveedores.js"></script>
     <script src="js/app.js"></script>
     <script src="js/hora.js"></script>
     <script src="js/dia.js"></script>
