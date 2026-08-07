@@ -5,8 +5,7 @@
  * 1. Open-Meteo es el proveedor principal (gratis, sin API key, buen límite de uso).
  * 2. Si Open-Meteo falla (red, servidor caído, etc.), se usa OpenWeather como respaldo.
  * 3. WeatherAPI se consulta aparte, solo para datos extra (índice UV y calidad del
- *    aire) que ni Open-Meteo ni OpenWeather dan gratis. Si falla o no hay API key
- *    configurada, simplemente no se muestran esos datos: nunca rompe la app.
+ *    aire) que ni Open-Meteo ni OpenWeather dan gratis. Si falla, no rompe la app.
  *
  * Todas las funciones devuelven (o reciben) el mismo objeto "clima normalizado":
  * {
@@ -18,9 +17,6 @@
  *   fuente: "open-meteo" | "openweather",
  * }
  */
-
-const OPENWEATHER_API_KEY = 'Tu-api-key-aqui';
-const WEATHERAPI_API_KEY = 'Tu-api-key-aqui';
 
 // ---------- Utilidades ----------
 
@@ -57,7 +53,6 @@ const ICONOS_WMO = {
 
 function mapaIconoWMO(codigo, esDia) {
   const base = ICONOS_WMO[codigo] || '03';
-  // El código "01" (despejado) sí tiene variante de noche real en OpenWeather.
   return `${base}${esDia ? 'd' : 'n'}`;
 }
 
@@ -96,7 +91,6 @@ async function climaOpenMeteo(lat, lon, nombreCiudad, pais) {
   const actual = data.current;
   const esDiaAhora = actual.is_day === 1;
 
-  // Pronóstico por horas: tomamos desde la hora actual, en pasos de 3h (8 tarjetas = 24h)
   const ahora = new Date();
   let inicio = data.hourly.time.findIndex((t) => new Date(t) >= ahora);
   if (inicio === -1) inicio = 0;
@@ -112,7 +106,6 @@ async function climaOpenMeteo(lat, lon, nombreCiudad, pais) {
     });
   }
 
-  // Pronóstico diario
   const hoyTexto = fechaLocalISO(new Date());
   const dias = data.daily.time.slice(0, 6).map((fechaTexto, i) => ({
     nombreDia: new Date(fechaTexto).toLocaleDateString('es-ES', { weekday: 'short' }),
@@ -139,7 +132,7 @@ async function climaOpenMeteo(lat, lon, nombreCiudad, pais) {
   };
 }
 
-// ---------- OpenWeather (respaldo) ----------
+// ---------- OpenWeather (respaldo mediante función Serverless) ----------
 
 function agruparPronosticoDiarioOWM(lista) {
   const porDia = {};
@@ -166,68 +159,59 @@ function agruparPronosticoDiarioOWM(lista) {
     });
 }
 
-async function _climaOpenWeather(url, forecastUrl) {
-  const res = await fetch(url);
-  const data = await res.json();
+async function _climaOpenWeather(queryParams) {
+  const res = await fetch(`/api/clima?provider=openweather&${queryParams}`);
+  if (!res.ok) throw new Error('ERROR_OPENWEATHER');
 
-  if (Number(data.cod) !== 200) {
-    throw new Error(data.cod === 404 || data.cod === '404' ? 'CIUDAD_NO_ENCONTRADA' : 'ERROR_OPENWEATHER');
+  const { weather, forecast } = await res.json();
+
+  if (Number(weather.cod) !== 200) {
+    throw new Error(weather.cod === 404 || weather.cod === '404' ? 'CIUDAD_NO_ENCONTRADA' : 'ERROR_OPENWEATHER');
   }
 
-  const forecastRes = await fetch(forecastUrl);
-  const forecastData = await forecastRes.json();
-  if (Number(forecastData.cod) !== 200) throw new Error('ERROR_OPENWEATHER');
+  if (Number(forecast.cod) !== 200) throw new Error('ERROR_OPENWEATHER');
 
-  const horas = forecastData.list.slice(0, 8).map((item) => ({
+  const horas = forecast.list.slice(0, 8).map((item) => ({
     horaTexto: `${new Date(item.dt * 1000).getHours()}:00`,
     temp: item.main.temp,
     icono: item.weather[0].icon,
   }));
 
   return {
-    ciudad: data.name,
-    pais: data.sys.country,
-    lat: data.coord.lat,
-    lon: data.coord.lon,
-    temp: data.main.temp,
-    sensacion: data.main.feels_like,
-    humedad: data.main.humidity,
-    vientoKmh: data.wind.speed * 3.6,
-    precipitacion: data.rain ? data.rain['1h'] : 0,
-    descripcion: data.weather[0].description,
-    icono: data.weather[0].icon,
+    ciudad: weather.name,
+    pais: weather.sys.country,
+    lat: weather.coord.lat,
+    lon: weather.coord.lon,
+    temp: weather.main.temp,
+    sensacion: weather.main.feels_like,
+    humedad: weather.main.humidity,
+    vientoKmh: weather.wind.speed * 3.6,
+    precipitacion: weather.rain ? weather.rain['1h'] : 0,
+    descripcion: weather.weather[0].description,
+    icono: weather.weather[0].icon,
     horas,
-    dias: agruparPronosticoDiarioOWM(forecastData.list),
+    dias: agruparPronosticoDiarioOWM(forecast.list),
     fuente: 'openweather',
   };
 }
 
 function climaOpenWeatherPorCiudad(city) {
-  const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(city)}&appid=${OPENWEATHER_API_KEY}&units=metric&lang=es`;
-  const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?q=${encodeURIComponent(city)}&appid=${OPENWEATHER_API_KEY}&units=metric&lang=es`;
-  return _climaOpenWeather(url, forecastUrl);
+  return _climaOpenWeather(`city=${encodeURIComponent(city)}`);
 }
 
 function climaOpenWeatherPorCoords(lat, lon) {
-  const url = `https://api.openweathermap.org/data/2.5/weather?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_API_KEY}&units=metric&lang=es`;
-  const forecastUrl = `https://api.openweathermap.org/data/2.5/forecast?lat=${lat}&lon=${lon}&appid=${OPENWEATHER_API_KEY}&units=metric&lang=es`;
-  return _climaOpenWeather(url, forecastUrl);
+  return _climaOpenWeather(`lat=${lat}&lon=${lon}`);
 }
 
-// ---------- WeatherAPI (solo datos extra: UV y calidad del aire) ----------
+// ---------- WeatherAPI (datos extra mediante función Serverless) ----------
 
 const TEXTOS_CALIDAD_AIRE = {
   1: 'Buena', 2: 'Moderada', 3: 'Dañina (grupos sensibles)', 4: 'Dañina', 5: 'Muy dañina', 6: 'Peligrosa',
 };
 
 async function datosExtra(lat, lon) {
-  if (!WEATHERAPI_API_KEY || WEATHERAPI_API_KEY.startsWith('TU_API_KEY')) {
-    return null; // sin key configurada: no intentamos la llamada
-  }
-
   try {
-    const url = `https://api.weatherapi.com/v1/current.json?key=${WEATHERAPI_API_KEY}&q=${lat},${lon}&aqi=yes`;
-    const res = await fetch(url);
+    const res = await fetch(`/api/clima?provider=weatherapi&lat=${lat}&lon=${lon}`);
     if (!res.ok) return null;
 
     const data = await res.json();
